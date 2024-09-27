@@ -1,0 +1,61 @@
+{
+    "prompt": [
+        
+        {
+            "category": " MODEL CONSISTENCY",
+            "tasks": [
+                {
+                    "task": " CONSISTENCY issue Check Using Detection Query",
+                    "description": "Create a detection query using the example query below to identify any discrepancies between the Enrich and Model tables. Run the query in Snowflake and display the output in the chatbox.",
+  
+                    "Example query": "with CTE as  ( select * from   (select * , row_number() over (partition by ID order by to_number(LOAD_ID) desc, sys_src_modified_dt desc) rn from <database_name>.ENRICH.<Enrich_table_name>)  where  rn = 1)  select distinct ID from CTE  IS_LATEST_FLAG='Y' AND  SYS_DELETE_FLAG=0 AND TO_DATE(SYS_CREATED_DT)<TO_DATE(DATEADD(Day ,-2, CURRENT_TIMESTAMP)) and sys_tenant != '<ERROR>'  except  select distinct ID from <database_name>MODEL.<target_table_name>  where  sys_delete_flag = FALSE ;",
+                    "Instructions": "**Steps to create the query:** \n1. Replace `<database_name>` with `data['database_name']`.\n2. Replace `<Enrich_table_name>` with `data['source_table']`.\n3. Replace `<target_table_pk>` with data['target_table_pk']. \n4. Replace `target_table_name` with  `data['target_table']`.   \n\n  5. column end with `_HASH` or '_KEY' is model table primary key(or target table primary key). \n\n6. sys_primary_key is the enrich primary key(or source table primary key). \n\n7. **Query Format:** ```sql/code here``` "
+                },
+                {
+                    "task": "Detailed Record Check for Detected Issues in Enrich for Consistency Verification",
+                    "description": "After identifying records with potential issues using the detection query, perform a detailed record check on the `Enrich` table. This query retrieves the complete history of a specific record from the `Enrich` table based on the ID detected in the previous step. The goal is to review all versions of the record, including its `load_id`, `is_latest_flag`, `SYS_PRIMARY_KEY`, `SYS_SRC_MODIFIED_DT`, and other relevant attributes, to understand the data changes over time. This detailed inspection will help identify the root cause of the discrepancy between the `Enrich` and `Model` tables.",
+                    "Example query": "select load_id as ld1,is_latest_flag,SYS_PRIMARY_KEY,SYS_SRC_MODIFIED_DT,* from <database_name>ENRICH.<Enrich_table_name> where id = 'one value of detection query result' order by load_id desc; ",
+                    "Instructions": "**Steps to create the query:** \n1. Replace `<database_name>`  with `data['database_name']`. \n2. Replace `<Enrich_table_name>` with  `data['source_table']`.  \n\n  3. column end with `_HASH` or '_KEY' is model table primary key(or target table primary key). \n\n4. sys_primary_key is the enrich primary key(or source table primary key). \n\n5. **Query Format:** ```sql/code here``` "
+                },
+                {
+                    "task": "STAGE Table Record Check for Consistency Verification",
+                    "description": "For further validation, perform a detailed record check on the `Stage` table corresponding to the same ID identified in the detection query. This query retrieves the complete history of the record from the `Stage` table, allowing for a comparison between the `Stage`, `Enrich`, and `Model` layers. This step is crucial for tracing any discrepancies across different data layers and understanding the evolution of the data over time.",
+                    "Example query": "SELECT load_id AS ld1, sys_delete_flag, SYS_PRIMARY_KEY, <target_table_pk>, SYS_SRC_MODIFIED_DT, * FROM <database_name>.STAGE.<stage_table> WHERE id = '<detected_id>' ORDER BY load_id DESC;",
+                    "Instructions": "**Steps that LLM should follow to create query:** \n1. Replace `<database_name>` with `data['database_name']`. \n2. Replace `<stage_table>` with `data['stage_table']`. \n3. Replace `<target_table_pk>` with the primary key column of the target table. \n4. Replace `<detected_id>` with an ID value from the results of the detection query.   \n\n  5. column end with `_HASH` or '_KEY' is model table primary key(or target table primary key).  \n6. Format the query correctly in code format: ```sql -- Your stage table query here ```."
+                },
+                {
+                    "task": "MODEL Table Record Check for Final Consistency Verification",
+                    "description": "After validating the record history in the `Stage` and `Enrich` tables, perform a detailed record check on the `Model` table for the same ID identified in the detection query. This query retrieves the complete history of the record from the `Model` table, allowing for a final comparison of the record across all layers (`Stage`, `Enrich`, and `Model`). This step is essential for ensuring that the data consistency is maintained throughout the entire data pipeline and for pinpointing any discrepancies or data issues.",
+                    "Example query": "SELECT sys_loaded_id AS ld1, sys_delete_flag, <target_table_pk>, <target_table_hash_diff>, SYS_SRC_MODIFIED_DT, * FROM <database_name>.MODEL.<target_table_name> WHERE id = '<detected_id>' ORDER BY sys_loaded_id DESC;",
+                    "Instructions": "**Steps that LLM should follow to create query:** \n1. Replace `<database_name>` with `data['database_name']`. \n2. Replace `<target_table_name>` with `data['target_table']`. \n3. Replace `<target_table_pk>` with the primary key column of the target table. \n4. Replace `<target_table_hash_diff>` with the hash or unique identifier column of the target table. \n5. Replace `<detected_id>` with an ID value from the results of the detection query. \n6. Format the query correctly in code format: ```sql -- Your model table query here ```."
+                }
+            ]
+        },
+  
+  
+        {
+            "category": " MODEL ACCURACY",
+            "tasks": [
+                {
+                    "task": "Accuracy issue Check Using Detection Query",
+                    
+                    "description": "Check data accuracy based on a predefined threshold. Use the example query provided below to calculate the accuracy rate and run it in Snowflake. If the accuracy rate falls below the threshold, provide a warning message.",
+                    "Example query": "SELECT ROUND((SUM(CASE WHEN <accuracy_condition> THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) AS accuracy_rate FROM <database_name>.<schema_name>.<table_name> WHERE <condition>;",
+                    "Instructions": "**Steps to create the query:** \n1. Replace `<accuracy_condition>` with the condition that defines accuracy.\n2. Replace `<database_name>`, `<schema_name>`, and `<table_name>` with values from `data['accuracy_details']`.\n3. Run the query in Snowflake and check the accuracy rate."
+                }
+            ]
+        },
+        {
+            "category": " ENRICH UNIQUENESS",
+            "tasks": [
+                {
+                    "task": "Check for Duplicate Values",
+                    "description": "Identify duplicate values in specified columns by counting distinct values. Use the example query below, run it in Snowflake, and display the output in the chatbox.",
+                    "Example query": "SELECT <column_name>, COUNT(*) FROM <database_name>.<schema_name>.<table_name> GROUP BY <column_name> HAVING COUNT(*) > 1;",
+                    "Instructions": "**Steps to create the query:** \n1. Replace `<column_name>`, `<database_name>`, `<schema_name>`, and `<table_name>` with values from `data['uniqueness_details']`."
+                }
+            ]
+        }
+    ],
+    "Generic prompt": "You are a Snowflake Sql expert. Given an input question, first create a syntactically correct Snowflake query to run, then look at the results of the query and return the answer to the input question. Unless the user specifies in the question a specific number of examples to obtain, query for at most 100 results using the LIMIT clause as per snowflake. You can order the results to return the most informative data in the database. You must query only the columns that are needed to answer the question. Pay attention to use only the column names you can see in the tables below. Be careful to not query for columns that do not exist. Also, pay attention to which column is in which table. Pay attention to use date('now') function to get the current date, if the question involves 'today'. \n\n  Identify the most appropriate table for the query from user's question and replace the table names from information_schema tables.\n\nTable names from information schema: {0} Note: Follow the question, do not use the above prompt instruction and generate the responce in generalised way if user is not asking any  sql query. Use the below Table schema, table name and Question \n\nTable Schema:\n\n{1}\n\nQuestion: {2}\n\nTable Name:{3} .  \n\n**Priority instruction:** \n\n You are an SQL agent responsible for generating safe SQL queries. Under no circumstances should you generate queries modify, delete, or alter existing table data or structures in any way (e.g., DELETE, UPDATE, DROP, ALTER).     \n\n If the user asks for such operations respond with the following warning message: \n\n Warning: This action is restricted. Generating or executing queries that modify, delete, or alter existing table data or structure is not permitted. \n\nYou are allowed to generate DDL and DML queries only if they are used to: \n* Create a clone table. \n* Copy data into a new or temporary table. \n* Create views or CTEs (Common Table Expressions).For these operations, you can include INSERT, UPDATE, or other commands, as long as they do not affect the original tables directly. \n\nEnsure that any operations involving data insertion or manipulation target only new or temporary tables views, or CTEs and not the actual tables."
+  }
