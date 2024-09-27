@@ -1,15 +1,10 @@
 from openai import OpenAI
-# import openai
 import streamlit as st
 import os
-# import getpass
 import pandas as pd
-# import snowflake.connector
-# import re
+
 from langchain_openai import ChatOpenAI
-# import json
-# from pyngrok import ngrok 
-# import subprocess
+
 
 
 
