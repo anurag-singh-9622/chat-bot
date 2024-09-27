@@ -1,5 +1,4 @@
 openai
 streamlit
 pandas
-snowflake-connector-python
 json
